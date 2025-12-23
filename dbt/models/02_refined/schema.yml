@@ -1,0 +1,9 @@
+version: 2
+
+sources:  
+  - name: adp_lakehouse_refined
+    description: Refined data in Lakehouse
+    schema: adp_lakehouse_refined
+    tables:
+      - name: refined_patients
+        description: Cleaned and transformed patients

@@ -1,0 +1,24 @@
+adp:
+  target: lakehouse
+  outputs:
+    lakehouse:
+      name: adp_lakehouse 
+      type: fabricspark
+      method: livy   
+      authentication: CLI 
+      endpoint: https://api.fabric.microsoft.com/v1
+      workspaceid: 439038d8-92d1-4b3d-8900-565e42464ee4
+      lakehouseid: 2df192da-4545-4245-a962-d37199d0f1d4
+      lakehouse: adp_lakehouse
+      schema: Lakehouse_raw
+      spark_config:
+        name: adp_lakehouse
+  
+    warehouse:
+      type: fabric
+      authentication: CLI
+      driver: ODBC Driver 18 for SQL Server
+      host: bkjr54bowwyufnypvcecwxiehm-3a4jaq6rsi6uxciakzpeerso4q.datawarehouse.fabric.microsoft.com
+      database: adp_warehouse
+      schema: dbo
+      threads: 4
