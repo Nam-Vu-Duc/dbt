@@ -1,5 +1,5 @@
 select *
-from {{ source('adp_lakehouse_raw', 'raw_patients') }}
+from {{ source('raw', 'fhir_patients') }}
 where air_pollution <= 0
   or alcohol_use <= 0
   or dust_allergy <= 0

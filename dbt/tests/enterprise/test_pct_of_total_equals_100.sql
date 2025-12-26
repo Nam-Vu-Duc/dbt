@@ -2,6 +2,6 @@
 select *
 from (
     select sum(pct_of_total_patients) as total_pct
-    from {{ ref('patient_cancer_risk') }}
+    from {{ ref('enterprise_patients') }}
 ) agg
-where total_pct <> 100
+where total_pct = 100

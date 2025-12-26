@@ -21,3 +21,53 @@ clean-targets:
   - "logs"
 
 require-dbt-version: [">=1.0.0", "<2.0.0"]
+
+models:
+  +post-hook:
+    - "{{ log_dbt_execution(status='SUCCESS', rows_affected = '(SELECT COUNT(*) FROM ' ~ this ~ ')') }}"
+  adp:
+    raw:
+      tags: ["raw"]
+      +schema: raw
+    refined:
+      tags: ["refined"]
+      +schema: refined
+    enterprise:
+      tags: ["enterprise"]
+      +schema: enterprise
+
+on-run-end:
+  - |
+    {% for result in results %}
+
+      {# 1. Log model failures (error, fail, skipped) #}
+      {% if result.node.resource_type in ['model', 'seed', 'snapshot'] and result.status in ['error', 'fail', 'skipped'] %}
+        {{ log_dbt_execution(
+          status = 'FAILURE',
+          rows_affected = 0,
+          model_name = result.node.name,
+          schema_name = result.node.schema
+        ) }}
+
+      {# 2. Log test results (pass or fail) #}
+      {% elif result.node.resource_type == 'test' %}
+        {% set test_status = 'SUCCESS' if result.status == 'pass' else 'FAILURE' %}
+        {% set failed_rows = result.failures | default(0) %}
+        {{ log_dbt_execution(
+          status = test_status,
+          rows_affected = failed_rows,
+          model_name = result.node.name,
+          schema_name = result.node.schema | default('monitoring')
+        ) }}
+      {% endif %}
+
+      {% endfor %}
+
+tests:
+  adp:
+    raw:
+      tags: ["raw"]
+    refined:
+      tags: ["refined"]
+    enterprise:
+      tags: ["enterprise"]
