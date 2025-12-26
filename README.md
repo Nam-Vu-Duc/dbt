@@ -1,92 +1,235 @@
 # ADP Transformation Pipeline
-
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## 📁 Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://source.fsdhp.com/dhp-hip-data-landscape/adp-transformation-pipeline.git
-git branch -M main
-git push -uf origin main
+adp-transformation-pipeline/
+├── README.md                     # Project documentation
+│
+├── dbt/                          # Main dbt project
+│   ├── dbt_project.yml          # Project configuration
+│   ├── profiles.yml             # Database connection profiles
+│   ├── packages.yml             # dbt package dependencies
+│   ├── package-lock.yml         # Locked package versions
+│   │
+│   ├── models/                  # Data models (3-layer architecture)
+│   │   ├── raw/                 # Raw data layer (views from source)
+│   │   │   ├── schema.yml       # Raw layer schema definitions
+│   │   │   └── tables/          # Source tables (raw data, unmodified)
+│   │   │
+│   │   ├── refined/             # Refined data layer (staging, transformations)
+│   │   │   ├── schema.yml       # Refined layer schema definitions
+│   │   │   ├── tables/
+│   │   │   │   └── refined_patients.sql
+│   │   │   └── views/
+│   │   │       └── stg_patients.sql    # Staging views (cleaned, deduplicated)
+│   │   │
+│   │   └── enterprise/          # Enterprise layer (aggregations, summaries)
+│   │       ├── schema.yml       # Enterprise layer schema definitions
+│   │       ├── tables/
+│   │       │   └── enterprise_patients.sql
+│   │       └── views/           # Business-ready reports
+│   │
+│   ├── tests/                   # Data quality tests (by layer)
+│   │   ├── raw/                 # Raw data validation tests
+│   │   │   ├── test_age_valid_range.sql
+│   │   │   ├── test_patient_id_format.sql
+│   │   │   ├── test_positive_risk_scores.sql
+│   │   │   └── test_raw_patients_not_null.sql
+│   │   │
+│   │   ├── refined/             # Refined data integrity tests
+│   │   │   └── test_refined_patients_no_duplicates.sql
+│   │   │
+│   │   └── enterprise/          # Summary table validation tests
+│   │       ├── test_patient_cancer_risk_has_data.sql
+│   │       └── test_pct_of_total_equals_100.sql
+│   │
+│   ├── seeds/                   # Static reference data (CSV files)
+│   │   ├── properties.yml       # Seed properties and configurations
+│   │   └── mapping/
+│   │       └── gender.csv       # Gender lookup table
+│   │
+│   ├── macros/                  # Reusable SQL/Jinja templates
+│   │   ├── clean_column_names.sql
+│   │   ├── generate_schema_name.sql
+│   │   └── log_dbt_execution.sql
+│   │
+│   ├── analyses/                # Ad-hoc queries and analysis
+│   ├── dbt_packages/            # Installed dbt packages (dbt_utils, etc.)
+│   │   └── dbt_utils/           # dbt utility functions
+│   │
+│   ├── logs/                    # dbt execution logs
+│   └── target/                  # Compiled SQL and run results
+│       ├── compiled/            # Compiled SQL files
+│       ├── run/                 # Executed models and tests
+│       ├── manifest.json        # dbt project metadata
+│       ├── graph.gpickle        # Project dependency graph
+│       └── run_results.json     # Execution results summary
+│
+├── pipeline/                     # Python orchestration layer
+│   └── [orchestration configs]  # DAG definitions, requirements, etc.
+│
+└── logs/                        # Application and execution logs
 ```
 
-## Integrate with your tools
+## 🔧 Configuration Files
 
-- [ ] [Set up project integrations](http://34.171.24.8:8929/dhp-hip-data-landscape/adp-transformation-pipeline/-/settings/integrations)
+### `dbt_project.yml`
+Defines project metadata, model paths, target directory, and layer-specific configurations:
+```yaml
+models:
+  adp:
+    raw:
+      materialized: table
+      schema: raw
+    refined:
+      materialized: table
+      schema: refined
+    enterprise:
+      materialized: table
+      schema: enterprise
+```
 
-## Collaborate with your team
+## 🚀 Key dbt Commands
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### Setup
+```bash
+# Install dbt and dependencies
+pip install dbt-fabric
+dbt deps
+```
 
-## Test and Deploy
+### Development
+```bash
+# Run all models
+dbt run
 
-Use the built-in continuous integration in GitLab.
+# Run specific model
+dbt run --select stg_patients
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+# Run specific layer
+dbt run --select raw
+dbt run --select refined
+dbt run --select enterprise
 
-***
+# Run with full refresh (drop and recreate)
+dbt run --full-refresh
 
-# Editing this README
+# Compile models without executing
+dbt parse
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Testing
+```bash
+# Run all tests
+dbt test
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# Run tests for specific layer
+dbt test --select tag:raw
+dbt test --select tag:refined
+dbt test --select tag:enterprise
 
-## Name
-Choose a self-explaining name for your project.
+# Run specific test
+dbt test --select test_patient_id_format
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Target-Specific Commands
+```bash
+dbt run --target warehouse
+dbt test --target warehouse
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Debugging & Documentation
+```bash
+# Generate dbt documentation
+dbt docs generate
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# Serve documentation locally
+dbt docs serve
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# Debug mode (verbose output)
+dbt run --debug
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+# List all models
+dbt list
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+# List models in a specific layer
+dbt list --select raw
+dbt list --select refined
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## 📊 Data Architecture
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Three-Layer Transformation Pipeline
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+#### 1. **Raw Layer** (`raw/`)
+- **Materialization**: Views
+- **Schema**: `raw`
+- **Purpose**: Direct views from source data systems
+- **Key Tables**: Source system tables (unmodified)
+- **Tests**: Data validation at source
+  - `test_age_valid_range.sql` - Ensures age values are within acceptable range
+  - `test_patient_id_format.sql` - Validates patient ID formatting
+  - `test_positive_risk_scores.sql` - Ensures risk scores are positive
+  - `test_raw_patients_not_null.sql` - Validates mandatory fields
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+#### 2. **Refined Layer** (`refined/`)
+- **Materialization**: Tables
+- **Schema**: `refined`
+- **Purpose**: Cleaned, transformed, and deduplicated data ready for analytics
+- **Key Tables & Views**:
+  - `refined_patients.sql` - Deduplicated patient table
+  - `stg_patients.sql` - Staging view with transformations
+- **Tests**: Data quality and consistency checks
+  - `test_refined_patients_no_duplicates.sql` - Ensures no duplicate patient records
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+#### 3. **Enterprise Layer** (`enterprise/`)
+- **Materialization**: Tables
+- **Schema**: `enterprise` (SQL Warehouse)
+- **Purpose**: Business-ready aggregated data and reports
+- **Key Tables & Views**:
+  - `enterprise_patients.sql` - Aggregated patient data with metrics
+- **Tests**: Summary validation
+  - `test_patient_cancer_risk_has_data.sql` - Validates data presence
+  - `test_pct_of_total_equals_100.sql` - Ensures aggregation integrity
 
-## License
-For open source projects, say how it is licensed.
+### Reference Data (Seeds)
+- **Location**: `seeds/mapping/`
+- **Load**: `dbt seed` command loads reference data into database
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## ⚙️ Environment Management
+
+## 🔄 Development Workflow
+
+1. **Update Source**: New data arrives in raw layer
+2. **Create/Update Tests**: Add tests in `tests/raw/` for data validation
+3. **Transform Data**: Build refined layer models in `models/refined/`
+4. **Add Tests**: Add tests in `tests/refined/` for transformation quality
+5. **Aggregate**: Create enterprise layer tables in `models/enterprise/`
+6. **Validate**: Add tests in `tests/enterprise/` for output validation
+7. **Generate Docs**: Run `dbt docs generate` for documentation
+8. **Deploy**: Commit changes and merge to main branch
+
+## 📌 Best Practices
+
+- **Credentials**: Store `profiles.yml` credentials securely using environment variables in production
+- **Default Target**: Default target is `lakehouse`; use `--target warehouse` for SQL Warehouse runs
+- **Testing**: Run tests before deploying changes - data quality is critical
+- **Documentation**: Update `schema.yml` files for better insights; run `dbt docs generate` regularly
+- **Source Control**: Commit all model, test, and macro changes; exclude `profiles.yml` and sensitive data
+
+## 🚦 Common Issues & Troubleshooting
+
+### Models not running
+- Check `dbt parse` for compilation errors
+- Verify `profiles.yml` has correct credentials
+- Ensure Lakehouse/Warehouse connectivity
+
+### Tests failing
+- Run `dbt test --debug` to see detailed error messages
+- Check test data assumptions against actual data
+- Verify schema names match configuration
+
+---
+
+**Project Status**: Development (using sample data for implementation)
+**Last Updated**: December 2024
